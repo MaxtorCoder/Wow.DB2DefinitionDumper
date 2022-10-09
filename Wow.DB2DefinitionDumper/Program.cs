@@ -12,13 +12,24 @@ while (string.IsNullOrEmpty(tableName))
 }
 
 var build = string.Empty;
-while (string.IsNullOrEmpty(build))
+bool buildIsValid = false;
+while (!buildIsValid)
 {
     Console.Write("Build: ");
     build = Console.ReadLine();
     
     if (string.IsNullOrEmpty(build))
-        Console.WriteLine("Please provide a valid build.");
+        Console.WriteLine("Please provide a valid build. Like 10.0.2.45969");
+    else
+    {
+        string[] array = build.Split(new char[1] { '.' });
+        if (array.Count() < 4)
+        {
+            Console.WriteLine("Please provide a valid build. Like 10.0.2.45969");
+        }
+        else
+            buildIsValid = true;
+    }
 }
 
 var dbdProvider = new GithubDbdProvider();
