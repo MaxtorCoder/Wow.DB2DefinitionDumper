@@ -17,7 +17,7 @@ public class DbdInfo
         var builder = new StringBuilder();
         foreach (var column in Columns)
         {
-            builder.Append($"{column.Type.PadRight(padding.Type)} {column.Name.PadRight(padding.Name)}");
+            builder.Append($"{column.Type.PadRight(padding.Type)} {(column.Name + ";").PadRight(padding.Name)}");
             if (!string.IsNullOrEmpty(column.Comment))
                 builder.Append($"// {column.Comment}");
             builder.AppendLine();
