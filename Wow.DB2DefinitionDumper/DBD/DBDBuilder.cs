@@ -1,4 +1,6 @@
 ﻿using DBDefsLib;
+using System.IO;
+using System.Linq;
 
 namespace Wow.DB2DefinitionDumper.DBD;
 
@@ -25,14 +27,19 @@ public class DbdBuilder
         }
 
         if (versionToUse == null)
-            throw new($"No definition found for table: {name} with build: {build}");
+        {
+            versionToUse = databaseDefinitions.versionDefinitions.Last();
+         //   throw new($"No definition found for table: {name} with build: {build}");
+        }
 
         var dbdInfo = new DbdInfo();
+
+        dbdInfo.FileName = name;
+        dbdInfo.LayoutHash = versionToUse.Value.layoutHashes[0];
 
         foreach (var fieldDefinition in versionToUse.Value.definitions)
         {
             var columnDefinition = databaseDefinitions.columnDefinitions[fieldDefinition.name];
-            var isLocalizedString = columnDefinition.type == "locstring";
             
             var dbdColumn = new DbdColumn
             {
@@ -50,8 +57,9 @@ public class DbdBuilder
                 dbdColumn.Comment += "Relation ";
             if (fieldDefinition.isNonInline)
                 dbdColumn.Comment += "Non-inline ";
-            if (isLocalizedString)
-                dbdColumn.Comment += "Localized string ";
+
+            dbdColumn.Field = fieldDefinition;
+            dbdColumn.Column = columnDefinition;
             
             dbdInfo.Columns.Add(dbdColumn);
         }
@@ -76,7 +84,7 @@ public class DbdBuilder
                     _ => new("Invalid field size")
                 };
                 
-                return isArray ? $"{typeString}[{field.arrLength}]" : typeString;
+                return isArray ? $"std::array<{typeString}, {field.arrLength}>" : typeString;
             }
             case "string":
                 return isArray ? $"string[{field.arrLength}]" : "string";
@@ -85,12 +93,12 @@ public class DbdBuilder
                 if (isArray)
                     throw new NotSupportedException("Localised string arrays are not supported");
 
-                return !localiseStrings || isArray ? $"string[{field.arrLength}]" : "string";
+                return !localiseStrings || isArray ? $"string[{field.arrLength}]" : "LocalizedString";
             }
             case "float":
-                return isArray ? $"float[{field.arrLength}]" : "float";
+                return isArray ? $"std::array<int32, {field.arrLength}>" : "float";
             default:
-                throw new ArgumentException("Unable to construct C# type from " + column.type);
+                throw new ArgumentException("Unable to construct C++ type from " + column.type);
         }
     }
 }
