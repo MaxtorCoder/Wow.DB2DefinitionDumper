@@ -1,4 +1,7 @@
-﻿namespace Wow.DB2DefinitionDumper.Providers;
+﻿using System.IO;
+using System.Net.Http;
+
+namespace Wow.DB2DefinitionDumper.Providers;
 
 public class GithubDbdProvider
 {

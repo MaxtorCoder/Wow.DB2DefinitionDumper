@@ -1,0 +1,54 @@
+﻿<mah:MetroWindow x:Class="Wow.DB2DefinitionDumper.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+        xmlns:local="clr-namespace:Wow.DB2DefinitionDumper"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        mc:Ignorable="d"
+        ShowTitleBar="False"
+        ShowCloseButton="False" 
+        ShowMaxRestoreButton="False" 
+        ShowMinButton="False"
+        GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+        Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+        Title="DB2DefinitionDumper" Height="320" Width="600" ResizeMode="NoResize" WindowStyle="None"
+             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+
+    <Window.Resources>
+        <Style x:Key="ButtonHoverBorder" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="3" Background="{TemplateBinding Background}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                            </ContentPresenter>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="0.8"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Rectangle x:Name="ToolBar" Fill="#FF171717" HorizontalAlignment="Center" Height="29" VerticalAlignment="Top" Width="600"/>
+        <Label x:Name="TitleLabel" Content="DB2DefinitionDumper" HorizontalAlignment="Left" VerticalAlignment="Top" Height="23" Foreground="White" Width="109" FontSize="10" Margin="1,3,0,0"/>
+        <Button x:Name="CloseBtn" Style="{StaticResource ButtonHoverBorder}" HorizontalAlignment="Left" Margin="573,3,0,0" VerticalAlignment="Top" Width="20" BorderBrush="{x:Null}" Foreground="{x:Null}" Height="20"/>
+        <TextBox x:Name="VersionBox" HorizontalAlignment="Left" Margin="10,34,0,0" TextWrapping="Wrap" Text="10.0.2.45969" VerticalAlignment="Top" Width="120"/>
+        <TextBox x:Name="TableName" HorizontalAlignment="Left" Margin="10,65,0,0" TextWrapping="Wrap" Text="Table" VerticalAlignment="Top" Width="120"/>
+        <Label x:Name="VersionLabel" Content="Version" HorizontalAlignment="Left" Margin="136,34,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.132,-0.462"/>
+        <Label Content="Table" HorizontalAlignment="Left" Margin="136,65,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.671,0.578"/>
+        <Button x:Name="DumpButton" Content="Dump" HorizontalAlignment="Left" Margin="10,96,0,0" VerticalAlignment="Top" Click="DumpButton_Click"/>
+        <TextBox x:Name="ResultBox" HorizontalAlignment="Left" Margin="235,34,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="355" Height="276"/>
+    </Grid>
+</mah:MetroWindow>
