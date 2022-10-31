@@ -8,12 +8,12 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         ShowTitleBar="False"
-        ShowCloseButton="False" 
-        ShowMaxRestoreButton="False" 
+        ShowCloseButton="False"
+        ShowMaxRestoreButton="False"
         ShowMinButton="False"
         GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
         Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-        Title="DB2DefinitionDumper" Height="320" Width="600" ResizeMode="NoResize" WindowStyle="None"
+        Title="DB2DefinitionDumper" Height="600" Width="900" ResizeMode="NoResize" WindowStyle="None"
              HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
 
     <Window.Resources>
@@ -41,14 +41,132 @@
         </Style>
     </Window.Resources>
     <Grid>
-        <Rectangle x:Name="ToolBar" Fill="#FF171717" HorizontalAlignment="Center" Height="29" VerticalAlignment="Top" Width="600"/>
-        <Label x:Name="TitleLabel" Content="DB2DefinitionDumper" HorizontalAlignment="Left" VerticalAlignment="Top" Height="23" Foreground="White" Width="109" FontSize="10" Margin="1,3,0,0"/>
-        <Button x:Name="CloseBtn" Style="{StaticResource ButtonHoverBorder}" HorizontalAlignment="Left" Margin="573,3,0,0" VerticalAlignment="Top" Width="20" BorderBrush="{x:Null}" Foreground="{x:Null}" Height="20"/>
-        <TextBox x:Name="VersionBox" HorizontalAlignment="Left" Margin="10,34,0,0" TextWrapping="Wrap" Text="10.0.2.45969" VerticalAlignment="Top" Width="120"/>
-        <TextBox x:Name="TableName" HorizontalAlignment="Left" Margin="10,65,0,0" TextWrapping="Wrap" Text="Table" VerticalAlignment="Top" Width="120"/>
-        <Label x:Name="VersionLabel" Content="Version" HorizontalAlignment="Left" Margin="136,34,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.132,-0.462"/>
-        <Label Content="Table" HorizontalAlignment="Left" Margin="136,65,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.671,0.578"/>
-        <Button x:Name="DumpButton" Content="Dump" HorizontalAlignment="Left" Margin="10,96,0,0" VerticalAlignment="Top" Click="DumpButton_Click"/>
-        <TextBox x:Name="ResultBox" HorizontalAlignment="Left" Margin="235,34,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="355" Height="276"/>
+        <!-- TOP BAR -->
+        <Rectangle x:Name="ToolBar"
+                    Fill="#FF171717"
+                    HorizontalAlignment="Center"
+                    Height="29"
+                    VerticalAlignment="Top"
+                    Width="900" />
+
+        <Label x:Name="TitleLabel"
+                Content="DB2DefinitionDumper"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Height="23"
+                Foreground="White"
+                Width="109"
+                FontSize="10"
+                Margin="1,3,0,0" />
+
+        <Button x:Name="CloseBtn"
+                Style="{StaticResource ButtonHoverBorder}"
+                HorizontalAlignment="Left"
+                Margin="875,4,0,0"
+                VerticalAlignment="Top"
+                Width="20"
+                BorderBrush="{x:Null}"
+                Foreground="{x:Null}"
+                Height="20" />
+
+        <!-- INPUT GRID -->
+        <Label Content="Version: "
+               HorizontalAlignment="Left"
+               Margin="10,34,0,0"
+               VerticalAlignment="Top"
+               RenderTransformOrigin="-0.132,-0.462" />
+
+        <TextBox x:Name="VersionBox"
+                 HorizontalAlignment="Left"
+                 Margin="70,34,0,0"
+                 TextWrapping="Wrap"
+                 Text="10.0.2.45969"
+                 VerticalAlignment="Top"
+                 Width="125" />
+
+        <Grid x:Name="TableNameInputGrid"
+                Visibility="Visible">
+            <TextBox x:Name="TableName"
+                        HorizontalAlignment="Left"
+                        Margin="250,34,0,0"
+                        TextWrapping="Wrap"
+                        VerticalAlignment="Top"
+                        Width="200" />
+
+            <Label Content="Table: "
+                    HorizontalAlignment="Left"
+                    Margin="202,34,0,0"
+                    VerticalAlignment="Top"
+                    RenderTransformOrigin="0.671,0.578" />
+        </Grid>
+
+        <Grid x:Name="TableNameDropdownGrid"
+                Visibility="Hidden">
+            <ComboBox x:Name="TableDropdown"
+                        HorizontalAlignment="Left"
+                        Margin="250,34,0,0"
+                        VerticalAlignment="Top"
+                        Width="200"  />
+
+            <Label Content="Table"
+                   HorizontalAlignment="Left"
+                   Margin="202,34,0,0"
+                   VerticalAlignment="Top"
+                   RenderTransformOrigin="0.671,0.578" />
+        </Grid>
+
+        <Label Content="Listfile Path: "
+               HorizontalAlignment="Left"
+               Margin="461,34,0,0"
+               VerticalAlignment="Top"
+               RenderTransformOrigin="0.671,0.578" />
+
+        <TextBox x:Name="ListfilePath"
+                 HorizontalAlignment="Left"
+                 Margin="537,34,0,0"
+                 VerticalAlignment="Top"
+                 Width="320" />
+
+        <Button Content="..."
+                HorizontalAlignment="Left"
+                Margin="862,34,0,0"
+                VerticalAlignment="Top"
+                Width="28"
+                Height="26"
+                Click="OpenPath_Click"/>
+
+        <Button x:Name="DumpButton"
+                Content="Dump"
+                HorizontalAlignment="Left"
+                Margin="10,563,0,0"
+                VerticalAlignment="Top"
+                Click="DumpButton_Click" Width="87" />
+
+        <Label Content="DB2 Meta"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               Margin="10,62,0,0" />
+
+        <TextBox x:Name="DB2MetaResult"
+                 HorizontalAlignment="Left"
+                 Margin="10,88,0,0"
+                 VerticalAlignment="Top"
+                 Width="435"
+                 Height="470"
+                 IsReadOnly="True" />
+
+        <Label Content="DB2 Structure"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               Margin="455,62,0,0" />
+
+        <TextBox x:Name="DB2StructResult"
+                 HorizontalAlignment="Left"
+                 Margin="455,88,0,0"
+                 VerticalAlignment="Top"
+                 Width="435"
+                 Height="470"
+                 IsReadOnly="True" />
+
     </Grid>
 </mah:MetroWindow>

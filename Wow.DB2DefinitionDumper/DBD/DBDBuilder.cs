@@ -1,6 +1,5 @@
 ﻿using DBDefsLib;
 using System.IO;
-using System.Linq;
 
 namespace Wow.DB2DefinitionDumper.DBD;
 
@@ -13,7 +12,7 @@ public class DbdBuilder
     /// <param name="name">The dbd name</param>
     /// <param name="build">The requested build</param>
     /// <returns></returns>
-    public static DbdInfo Build(Stream dbd, string name, string build)
+    public static DbdInfo Build(Stream dbd, string name, string build, uint fileDataId)
     {
         var dbdReader = new DBDReader();
 
@@ -26,16 +25,14 @@ public class DbdBuilder
             Utils.GetVersionDefinitionByBuild(databaseDefinitions, dbBuild, out versionToUse);
         }
 
-        if (versionToUse == null)
+        versionToUse ??= databaseDefinitions.versionDefinitions.Last();
+
+        var dbdInfo = new DbdInfo
         {
-            versionToUse = databaseDefinitions.versionDefinitions.Last();
-         //   throw new($"No definition found for table: {name} with build: {build}");
-        }
-
-        var dbdInfo = new DbdInfo();
-
-        dbdInfo.FileName = name;
-        dbdInfo.LayoutHash = versionToUse.Value.layoutHashes[0];
+            FileName = name,
+            LayoutHash = versionToUse.Value.layoutHashes[0],
+            FileDataId = fileDataId
+        };
 
         foreach (var fieldDefinition in versionToUse.Value.definitions)
         {
@@ -87,7 +84,7 @@ public class DbdBuilder
                 return isArray ? $"std::array<{typeString}, {field.arrLength}>" : typeString;
             }
             case "string":
-                return isArray ? $"string[{field.arrLength}]" : "string";
+                return isArray ? $"std::array<char const*, {field.arrLength}>" : "char const*";
             case "locstring":
             {
                 if (isArray)

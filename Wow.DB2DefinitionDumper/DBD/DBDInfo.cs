@@ -1,15 +1,13 @@
-﻿using System.Data.Common;
-using System.Reflection.Metadata;
-using System.Text;
+﻿using System.Text;
 
 namespace Wow.DB2DefinitionDumper.DBD;
 
 public class DbdInfo
 {
-    public string FileName { get; set; }
+    public string? FileName { get; set; }
     public List<DbdColumn> Columns { get; } = new();
-    public string LayoutHash { get; set; }
-    public int FileDataId { get; set; } = 0;
+    public string? LayoutHash { get; set; }
+    public uint FileDataId { get; set; } = 0u;
 
     /// <summary>
     /// Parses the <see cref="DbdColumn"/> instance to a C like structure string.
@@ -17,15 +15,13 @@ public class DbdInfo
     /// <returns></returns>
     public string GetColumns()
     {
-        var padding = GetMaxPadding();
-        
         var builder = new StringBuilder();
         foreach (var column in Columns)
         {
             if (string.IsNullOrEmpty(column.Comment))
-                builder.Append($"{column.Type.PadRight(padding.Type)} {(column.Name + ";").PadRight(padding.Name)}");
+                builder.Append($"{column.Type} {column.Name + ";"}");
             else
-                builder.Append($"{column.Type.PadRight(padding.Type)} {(column.Name + ";").PadRight(padding.Type + padding.Name)}").Append($"// {column.Comment}");
+                builder.Append($"{column.Type} {column.Name + ";"}");
             builder.AppendLine();
         }
         return builder.ToString();
@@ -58,11 +54,6 @@ public class DbdInfo
                 parentIndexField = i + (indexField == -1 ? -1 : 0);
                 fileFieldCount--;
             }
-
-            //if (column.Field.isID)
-            //    dbdColumn.Comment += "Relation ";
-            //if (column.Field.isNonInline)
-            //    dbdColumn.Comment += "Non-inline ";
 
             columnsBuild.Append(padding);
             columnsBuild.Append(padding);
@@ -158,26 +149,11 @@ public class DbdInfo
         builder.Append(", ");
         builder.Append(isArray ? field.arrLength : 1);
         builder.Append(", ");
-        if (field.isSigned)
+        if (field.isSigned || column.Column.type == "float")
             builder.Append("true");
         else
             builder.Append("false");
         builder.Append(" },");
         return builder.ToString();
-    }
-
-    private (int Name, int Type) GetMaxPadding()
-    {
-        var typePadding = 6;
-        var namePadding = 20;
-        foreach (var column in Columns)
-        {
-            if (column.Type.Length > typePadding)
-                typePadding = column.Type.Length + 1;
-            if (column.Name.Length > namePadding)
-                namePadding = column.Name.Length + 1;
-        }
-
-        return (namePadding, typePadding);
     }
 }
