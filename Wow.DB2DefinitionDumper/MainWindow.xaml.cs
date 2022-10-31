@@ -80,7 +80,7 @@ namespace Wow.DB2DefinitionDumper
                     await metadataWriter.WriteLineAsync(data + "\n");
 
                 foreach (var (_, data) in _structures)
-                    await structureWriter.WriteLineAsync(data + "\n");
+                    await structureWriter.WriteLineAsync(data);
 
                 _ = MessageBox.Show("Finished dumping all structures and metadata!");
             }
