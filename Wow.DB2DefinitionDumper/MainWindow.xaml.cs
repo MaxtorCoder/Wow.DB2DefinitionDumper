@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Windows;
 
 using MahApps.Metro.Controls;
+using MahApps.Metro.Controls.Dialogs;
 using Microsoft.Win32;
 
 using Wow.DB2DefinitionDumper.DBD;
@@ -82,7 +83,7 @@ namespace Wow.DB2DefinitionDumper
                 foreach (var (_, data) in _structures)
                     await structureWriter.WriteLineAsync(data);
 
-                _ = MessageBox.Show("Finished dumping all structures and metadata!");
+                await this.ShowMessageAsync("Dumper", "Finished dumping all structures and metadata!");
             }
 
             DumpButton.IsEnabled = true;
@@ -95,20 +96,20 @@ namespace Wow.DB2DefinitionDumper
         {
             if (string.IsNullOrEmpty(tableName))
             {
-                _ = MessageBox.Show("Invalid table name", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await this.ShowMessageAsync("Error", "Invalid table name", MessageDialogStyle.Affirmative);
                 return;
             }
 
             if (string.IsNullOrEmpty(versionText))
             {
-                _ = MessageBox.Show("Please provide a valid build. Like 10.0.2.45969", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await this.ShowMessageAsync("Error", "Please provide a valid build. Like 10.0.2.45969", MessageDialogStyle.Affirmative);
                 return;
             }
 
             var array = versionText.Split('.');
             if (array.Length < 4)
             {
-                _ = MessageBox.Show("Please provide a valid build. Like 10.0.2.45969", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await this.ShowMessageAsync("Error", "Please provide a valid build. Like 10.0.2.45969", MessageDialogStyle.Affirmative);
                 return;
             }
 
@@ -184,19 +185,19 @@ namespace Wow.DB2DefinitionDumper
                         DumpButton.IsEnabled = true;
                     });
 
-                    _ = MessageBox.Show("Finished loading listfile!");
+                    await this.ShowMessageAsync("Listfile", "Finished loading listfile!", MessageDialogStyle.Affirmative);
                 });
             }
         }
 
-        private void LoadDisplayNames()
+        private async void LoadDisplayNames()
         {
             var fileStream = File.OpenRead("db2_display_names.json");
 
             var content = JsonSerializer.Deserialize<List<DB2DisplayNameRecord>>(fileStream);
             if (content == null)
             {
-                _ = MessageBox.Show("Failed to load DB2 Display Names", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await this.ShowMessageAsync("Error", "Failed to load DB2 Display Names", MessageDialogStyle.Affirmative);
                 return;
             }
 
