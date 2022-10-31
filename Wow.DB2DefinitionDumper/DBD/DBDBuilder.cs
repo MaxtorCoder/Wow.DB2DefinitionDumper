@@ -40,7 +40,7 @@ public class DbdBuilder
         foreach (var fieldDefinition in versionToUse.Value.definitions)
         {
             var columnDefinition = databaseDefinitions.columnDefinitions[fieldDefinition.name];
-            
+
             var dbdColumn = new DbdColumn
             {
                 Name = fieldDefinition.name
@@ -60,13 +60,13 @@ public class DbdBuilder
 
             dbdColumn.Field = fieldDefinition;
             dbdColumn.Column = columnDefinition;
-            
+
             dbdInfo.Columns.Add(dbdColumn);
         }
-        
+
         return dbdInfo;
     }
-    
+
     private static string FieldDefinitionToType(Structs.Definition field, Structs.ColumnDefinition column, bool localiseStrings)
     {
         var isArray = field.arrLength != 0;
@@ -83,7 +83,7 @@ public class DbdBuilder
                     64 => field.isSigned ? "int64" : "uint64",
                     _ => new("Invalid field size")
                 };
-                
+
                 return isArray ? $"std::array<{typeString}, {field.arrLength}>" : typeString;
             }
             case "string":
@@ -96,7 +96,7 @@ public class DbdBuilder
                 return !localiseStrings || isArray ? $"string[{field.arrLength}]" : "LocalizedString";
             }
             case "float":
-                return isArray ? $"std::array<int32, {field.arrLength}>" : "float";
+                return isArray ? $"std::array<float, {field.arrLength}>" : "float";
             default:
                 throw new ArgumentException("Unable to construct C++ type from " + column.type);
         }
