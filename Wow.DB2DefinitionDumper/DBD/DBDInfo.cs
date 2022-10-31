@@ -16,14 +16,13 @@ public class DbdInfo
     public string GetColumns()
     {
         var builder = new StringBuilder();
+        builder.AppendLine($"struct {FileName}Entry");
+        builder.AppendLine("{");
+
         foreach (var column in Columns)
-        {
-            if (string.IsNullOrEmpty(column.Comment))
-                builder.Append($"{column.Type} {column.Name + ";"}");
-            else
-                builder.Append($"{column.Type} {column.Name + ";"}");
-            builder.AppendLine();
-        }
+            builder.AppendLine($"    {column.Type} {column.Name};");
+
+        builder.AppendLine("};");
         return builder.ToString();
     }
 
@@ -42,17 +41,24 @@ public class DbdInfo
         {
             var column = Columns[i];
 
-            if (i == 0 && column.Field.isID && column.Field.isNonInline)
+            if (column.Field.isID)
             {
-                fieldCount--;
-                fileFieldCount--;
-                continue;
+                indexField = column.Field.isNonInline ? -1 : i;
+
+                if (column.Field.isNonInline)
+                {
+                    fieldCount--;
+                    fileFieldCount--;
+                    continue;
+                }
             }
 
             if (column.Field.isRelation)
             {
                 parentIndexField = i + (indexField == -1 ? -1 : 0);
-                fileFieldCount--;
+
+                if (column.Field.isNonInline)
+                    fileFieldCount--;
             }
 
             columnsBuild.Append(padding);
@@ -84,7 +90,7 @@ public class DbdInfo
         builder.Append(columnsBuild);
         builder.Append(padding);
         builder.Append(padding);
-        builder.Append("}");
+        builder.Append("};");
         builder.AppendLine();
         builder.Append(padding);
         builder.Append(padding);
@@ -149,7 +155,8 @@ public class DbdInfo
         builder.Append(", ");
         builder.Append(isArray ? field.arrLength : 1);
         builder.Append(", ");
-        if (field.isSigned || column.Column.type == "float")
+
+        if (!field.isID && (field.isSigned || column.Column.type == "float" || column.Column.type == "locstring" || column.Column.type == "string"))
             builder.Append("true");
         else
             builder.Append("false");

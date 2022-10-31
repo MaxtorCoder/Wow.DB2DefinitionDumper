@@ -10,13 +10,25 @@ public class GithubDbdProvider
 
     public GithubDbdProvider()
     {
+        if (!Directory.Exists("cache"))
+            Directory.CreateDirectory("cache");
+
         _client.BaseAddress = BaseUri;
     }
 
     public async Task<Stream> StreamForTableName(string tableName)
     {
         var query = $"{tableName}.dbd";
-        var bytes = await _client.GetByteArrayAsync(query);
+
+        byte[] bytes;
+        if (!File.Exists($"cache/{query}"))
+        {
+            bytes = await _client.GetByteArrayAsync(query);
+            await File.WriteAllBytesAsync($"cache/{query}", bytes);
+        }
+        else
+            bytes = await File.ReadAllBytesAsync($"cache/{query}");
+
         return new MemoryStream(bytes);
     }
 }

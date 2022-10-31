@@ -140,7 +140,31 @@
                 HorizontalAlignment="Left"
                 Margin="10,563,0,0"
                 VerticalAlignment="Top"
-                Click="DumpButton_Click" Width="87" />
+                Click="DumpButton_Click"
+                Width="87" />
+
+        <CheckBox x:Name="DumpToFile"
+                  HorizontalAlignment="Left"
+                  Margin="114,568,0,0"
+                  VerticalAlignment="Top" />
+        <Label Content="Dump To File"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               Margin="138,564,0,0" />
+
+        <CheckBox x:Name="DumpAllDB2"
+                  HorizontalAlignment="Left"
+                  Margin="233,568,0,0"
+                  VerticalAlignment="Top" />
+        <Label Content="Dump all DB2 metadata"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               Margin="257,564,0,0" />
+
+        <Label x:Name="DumpLog"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               Margin="457,564,0,0" />
 
         <Label Content="DB2 Meta"
                HorizontalAlignment="Left"

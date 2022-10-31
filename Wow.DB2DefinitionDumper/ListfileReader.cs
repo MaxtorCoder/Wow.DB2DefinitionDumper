@@ -43,7 +43,7 @@ namespace Wow.DB2DefinitionDumper
         public Dictionary<uint, string> GetAvailableDB2s()
         {
             return _listfileEntries.Where(x => x.Value.EndsWith(".db2"))
-                .OrderBy(x => x.Value, StringComparer.Ordinal)
+                .OrderBy(x => x.Value, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x.Key, x => x.Value);
         }
 

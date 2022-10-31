@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Concurrent;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 
@@ -19,6 +20,9 @@ namespace Wow.DB2DefinitionDumper
 
         private List<DB2DisplayNameRecord> _db2DisplayNames = new();
 
+        private List<(string, string)> _metadatas = new();
+        private List<(string, string)> _structures = new();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -31,31 +35,77 @@ namespace Wow.DB2DefinitionDumper
 
         private async void DumpButton_Click(object sender, RoutedEventArgs e)
         {
-            var tableName = TableName.Text;
-            if (_listfileReader.IsLoaded)
-                tableName = TableDropdown.SelectedItem as string;
+            DumpButton.IsEnabled = false;
+            VersionBox.IsEnabled = false;
+            TableName.IsEnabled = false;
+            TableDropdown.IsEnabled = false;
 
-            var normalizedName = _db2DisplayNames.FirstOrDefault(x => x.displayName == tableName);
-            if (normalizedName == null)
+            // So we do not get issues with thread blocking
+            var version = VersionBox.Text;
+
+            // Dump all DB2 metadata
+            if (DumpAllDB2.IsChecked ?? false)
             {
-                _ = MessageBox.Show($"Failed to find normalized name for {tableName}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                foreach (var (fileDataId, db2Name) in _listfileReader.GetAvailableDB2s())
+                {
+                    if (db2Name.Contains("internal"))
+                        continue;
+
+                    var normalizedDb2Name = db2Name.Replace("dbfilesclient/", "")
+                        .Replace(".db2", "");
+
+                    var normalizedName = _db2DisplayNames.FirstOrDefault(x => x.name == normalizedDb2Name);
+                    if (normalizedName == null)
+                        continue;
+
+                    DumpLog.Content = $"Dumping {normalizedName.displayName} for build {VersionBox.Text} ...";
+                    await DumpDB2MetaData(normalizedName.displayName, version, true, fileDataId);
+                }
+            }
+            else
+            {
+                var tableName = TableName.Text;
+                if (_listfileReader.IsLoaded)
+                    tableName = TableDropdown.SelectedItem as string;
+
+                await DumpDB2MetaData(tableName, version, DumpToFile.IsChecked ?? false);
             }
 
-            if (string.IsNullOrEmpty(normalizedName.displayName))
+            if ((DumpAllDB2.IsChecked ?? false) || (DumpToFile.IsChecked ?? false))
+            {
+                using var metadataWriter = new StreamWriter("DB2Metadata.h");
+                using var structureWriter = new StreamWriter("DB2Structure.h");
+
+                foreach (var (_, data) in _metadatas)
+                    await metadataWriter.WriteLineAsync(data + "\n");
+
+                foreach (var (_, data) in _structures)
+                    await structureWriter.WriteLineAsync(data + "\n");
+
+                _ = MessageBox.Show("Finished dumping all structures and metadata!");
+            }
+
+            DumpButton.IsEnabled = true;
+            VersionBox.IsEnabled = true;
+            TableName.IsEnabled = true;
+            TableDropdown.IsEnabled = true;
+        }
+
+        private async Task DumpDB2MetaData(string? tableName, string? versionText, bool dumpToFile, uint fileDataId = 0)
+        {
+            if (string.IsNullOrEmpty(tableName))
             {
                 _ = MessageBox.Show("Invalid table name", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            var version = VersionBox.Text;
-            if (string.IsNullOrEmpty(version))
+            if (string.IsNullOrEmpty(versionText))
             {
                 _ = MessageBox.Show("Please provide a valid build. Like 10.0.2.45969", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            var array = version.Split('.');
+            var array = versionText.Split('.');
             if (array.Length < 4)
             {
                 _ = MessageBox.Show("Please provide a valid build. Like 10.0.2.45969", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -65,20 +115,30 @@ namespace Wow.DB2DefinitionDumper
             try
             {
                 var dbdProvider = new GithubDbdProvider();
-                var dbdStream = await dbdProvider.StreamForTableName(normalizedName.displayName);
+                var dbdStream = await dbdProvider.StreamForTableName(tableName);
 
-                var fileDataId = 0u;
-                if (_listfileReader.IsLoaded)
-                    fileDataId = _listfileReader.GetFileDataIdByEntry($"dbfilesclient/{normalizedName.name}.db2");
+                if (fileDataId == 0 && _listfileReader.IsLoaded)
+                    fileDataId = _listfileReader.GetFileDataIdByEntry($"dbfilesclient/{tableName.ToLower()}.db2");
 
-                var dbdInfo = DbdBuilder.Build(dbdStream, normalizedName.displayName, version, fileDataId);
+                var dbdInfo = DbdBuilder.Build(dbdStream, tableName, versionText, fileDataId);
+                if (dbdInfo == null)
+                    return;
 
-                DB2StructResult.Text = dbdInfo.GetColumns();
-                DB2MetaResult.Text = dbdInfo.DumpMeta();
+                if (dumpToFile)
+                {
+                    _structures.Add((tableName, dbdInfo.GetColumns()));
+                    _metadatas.Add((tableName, dbdInfo.DumpMeta()));
+                }
+                else
+                {
+                    DB2StructResult.Text = dbdInfo.GetColumns();
+                    DB2MetaResult.Text = dbdInfo.DumpMeta();
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                _ = MessageBox.Show($"Couldn't retrieve data for {normalizedName.displayName}!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // _ = MessageBox.Show($"Couldn't retrieve data for {tableName}!\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // throw;
             }
         }
 

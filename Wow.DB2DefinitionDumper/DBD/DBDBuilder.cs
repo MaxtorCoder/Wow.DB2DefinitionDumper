@@ -5,6 +5,8 @@ namespace Wow.DB2DefinitionDumper.DBD;
 
 public class DbdBuilder
 {
+    private static readonly DBDReader _reader = new();
+
     /// <summary>
     /// Builds a <see cref="DbdInfo"/> instance based on the provided <see cref="dbd"/> argument.
     /// </summary>
@@ -12,11 +14,9 @@ public class DbdBuilder
     /// <param name="name">The dbd name</param>
     /// <param name="build">The requested build</param>
     /// <returns></returns>
-    public static DbdInfo Build(Stream dbd, string name, string build, uint fileDataId)
+    public static DbdInfo? Build(Stream dbd, string name, string build, uint fileDataId)
     {
-        var dbdReader = new DBDReader();
-
-        var databaseDefinitions = dbdReader.Read(dbd);
+        var databaseDefinitions = _reader.Read(dbd);
 
         Structs.VersionDefinitions? versionToUse = null;
         if (!string.IsNullOrEmpty(build))
@@ -25,7 +25,11 @@ public class DbdBuilder
             Utils.GetVersionDefinitionByBuild(databaseDefinitions, dbBuild, out versionToUse);
         }
 
-        versionToUse ??= databaseDefinitions.versionDefinitions.Last();
+        versionToUse ??= databaseDefinitions.versionDefinitions.LastOrDefault();
+        if (versionToUse == null || versionToUse.Value.layoutHashes == null || versionToUse.Value.layoutHashes.Length == 0)
+        {
+            return null;
+        }
 
         var dbdInfo = new DbdInfo
         {
@@ -43,17 +47,21 @@ public class DbdBuilder
                 Name = fieldDefinition.name
             };
 
+            if (columnDefinition.type == "locstring")
+                dbdColumn.Name = dbdColumn.Name.Replace("_lang", "");
+
+            // Remove all underscores from names and uppercase the next character
+            while (dbdColumn.Name.Contains("_"))
+            {
+                var indexOf = dbdColumn.Name.IndexOf("_");
+                dbdColumn.Name = dbdColumn.Name.Replace("_", "");
+                dbdColumn.Name = dbdColumn.Name.ReplaceAt(indexOf, char.ToUpper(dbdColumn.Name[indexOf]));
+            }
+
             if (fieldDefinition.isRelation && fieldDefinition.isNonInline)
                 dbdColumn.Type = fieldDefinition.arrLength == 0 ? "int32" : $"int32[{fieldDefinition.arrLength}]";
             else
                 dbdColumn.Type = FieldDefinitionToType(fieldDefinition, columnDefinition, true);
-
-            if (fieldDefinition.isID)
-                dbdColumn.Comment += "ID ";
-            if (fieldDefinition.isRelation)
-                dbdColumn.Comment += "Relation ";
-            if (fieldDefinition.isNonInline)
-                dbdColumn.Comment += "Non-inline ";
 
             dbdColumn.Field = fieldDefinition;
             dbdColumn.Column = columnDefinition;
