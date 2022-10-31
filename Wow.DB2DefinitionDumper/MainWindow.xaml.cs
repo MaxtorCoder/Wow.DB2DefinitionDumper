@@ -31,6 +31,7 @@ namespace Wow.DB2DefinitionDumper
 
             ToolBar.MouseLeftButtonDown += (e, o) => DragMove();
             CloseBtn.Click += (e, o) => Close();
+            MinimizeBtn.Click += (e, o) => WindowState = WindowState.Minimized;
         }
 
         private async void DumpButton_Click(object sender, RoutedEventArgs e)
