@@ -1,19 +1,20 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Wow.DB2DefinitionDumper.DBD;
 
 public class DbdInfo
 {
-    public string? FileName { get; set; }
+    public string FileName { get; set; }
     public List<DbdColumn> Columns { get; } = new();
     public string? LayoutHash { get; set; }
-    public uint FileDataId { get; set; } = 0u;
+    public uint FileDataId { get; set; }
 
     /// <summary>
     /// Parses the <see cref="DbdColumn"/> instance to a C like structure string.
     /// </summary>
     /// <returns></returns>
-    public string GetColumns()
+    public string DumpStructures()
     {
         var builder = new StringBuilder();
         builder.AppendLine($"struct {FileName}Entry");
@@ -26,10 +27,14 @@ public class DbdInfo
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Parses the <see cref="DbdColumn"/> instance to MetaData.
+    /// </summary>
+    /// <returns></returns>
     public string DumpMeta()
     {
-        int indexField = -1;
-        int parentIndexField = -1;
+        var indexField = -1;
+        var parentIndexField = -1;
         var fieldCount = Columns.Count;
         var fileFieldCount = Columns.Count;
 
@@ -37,7 +42,7 @@ public class DbdInfo
 
         var columnsBuild = new StringBuilder();
 
-        for (int i = 0; i < Columns.Count; ++i)
+        for (var i = 0; i < Columns.Count; ++i)
         {
             var column = Columns[i];
 
@@ -61,56 +66,86 @@ public class DbdInfo
                     fileFieldCount--;
             }
 
-            columnsBuild.Append(padding);
-            columnsBuild.Append(padding);
-            columnsBuild.Append(padding);
-            columnsBuild.Append(ConvertColumnToMetaField(column));
-            columnsBuild.AppendLine();
+            columnsBuild.AppendLine($"        {ConvertColumnToMetaField(column)}");
         }
 
         var builder = new StringBuilder();
-        builder.Append($"struct {FileName}Meta");
+        builder.AppendLine($"struct {FileName}Meta");
+        builder.AppendLine("{");
+        builder.AppendLine($"    static constexpr DB2MetaField Fields[{fieldCount}] =");
+        builder.AppendLine("    {");
+        builder.Append($"{columnsBuild}");
+        builder.AppendLine("    };");
         builder.AppendLine();
-        builder.Append("{");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append("static DB2Meta const* Instance()");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append("{");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append(padding);
-        builder.Append($"static constexpr DB2MetaField fields[{fieldCount}] =");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append(padding);
-        builder.Append("{");
-        builder.AppendLine();
-        builder.Append(columnsBuild);
-        builder.Append(padding);
-        builder.Append(padding);
-        builder.Append("};");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append(padding);
-        builder.Append($"static constexpr DB2Meta instance({FileDataId}, {indexField}, {fieldCount}, {fileFieldCount}, 0x{LayoutHash}, fields, {parentIndexField});");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append(padding);
-        builder.Append($"return &instance;");
-        builder.AppendLine();
-        builder.Append(padding);
-        builder.Append("}");
-        builder.AppendLine();
-        builder.Append("};");
+        builder.AppendLine($"    static constexpr DB2Meta Instance{{ {FileDataId}, {indexField}, {fieldCount}, {fileFieldCount}, 0x{LayoutHash}, Fields, {parentIndexField} }};");
+        builder.AppendLine("};");
 
         return builder.ToString();
     }
 
-    private string ConvertColumnToMetaField(DbdColumn column)
+    /// <summary>
+    /// Parses the <see cref="DbdColumn"/> instance to LoadInfo.
+    /// </summary>
+    /// <returns></returns>
+    public string DumpLoadInfo()
     {
-        StringBuilder builder = new StringBuilder();
+        var fieldCount = 0;
+
+        var columnBuilder = new StringBuilder();
+        foreach (var column in Columns)
+        {
+            var typeString = column.Field.size switch
+            {
+                8 => "FT_BYTE",
+                16 => "FT_SHORT",
+                32 => "FT_INT",
+                64 => "FT_LONG",
+                _ => new("Invalid field size")
+            };
+
+            if (column.Column.type is "string" or "locstring")
+                typeString = "FT_STRING";
+
+            var isSigned = column.Field.isSigned ? "true" : "false";
+            if (column.Field.isID)
+                isSigned = "false";
+
+            if (column.Field.arrLength > 0)
+            {
+                for (var j = 0; j < column.Field.arrLength; ++j)
+                {
+                    columnBuilder.AppendLine($"        {{ {isSigned}, {typeString}, \"{column.Name}{j + 1}\" }},");
+                    fieldCount++;
+                }
+            }
+            else
+            {
+                columnBuilder.AppendLine($"        {{ {isSigned}, {typeString}, \"{column.Name}\" }},");
+                fieldCount++;
+            }
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine($"struct {FileName}LoadInfo");
+        builder.AppendLine("{");
+
+        builder.AppendLine($"    static constexpr DB2FieldMeta Fields[{fieldCount}] =");
+        builder.AppendLine("    {");
+        builder.Append($"{columnBuilder}");
+        builder.AppendLine("    };");
+
+        builder.AppendLine();
+
+        var sqlName = ConvertToScreamingSnakeCase(FileName);
+        builder.AppendLine($"    static constexpr DB2LoadInfo Instance {{ Fields, {fieldCount}, &{FileName}Meta::Instance, HOTFIX_SEL_{sqlName} }};");
+
+        builder.AppendLine("};");
+        return builder.ToString();
+    }
+
+    static string ConvertColumnToMetaField(DbdColumn column)
+    {
+        var builder = new StringBuilder();
 
         builder.Append("{ ");
 
@@ -163,4 +198,6 @@ public class DbdInfo
         builder.Append(" },");
         return builder.ToString();
     }
+
+    static string ConvertToScreamingSnakeCase(string input) => Regex.Replace(input, "([a-z])([A-Z])", "$1_$2").ToUpper();
 }

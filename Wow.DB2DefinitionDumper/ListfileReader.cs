@@ -4,9 +4,9 @@ namespace Wow.DB2DefinitionDumper
 {
     public class ListfileReader
     {
-        public bool IsLoaded { get; private set; } = false;
+        public bool IsLoaded { get; private set; }
 
-        private Dictionary<uint, string> _listfileEntries = new();
+        readonly Dictionary<uint, string> _listfileEntries = new();
 
         /// <summary>
         /// Opens the listfile file and loads that into memory.
@@ -53,6 +53,6 @@ namespace Wow.DB2DefinitionDumper
         /// <param name="entry"></param>
         /// <returns></returns>
         public uint GetFileDataIdByEntry(string entry)
-            => _listfileEntries.FirstOrDefault(x => x.Value == entry).Key;
+            => _listfileEntries.FirstOrDefault(x => string.Compare(x.Value, entry, StringComparison.OrdinalIgnoreCase) == 0).Key;
     }
 }

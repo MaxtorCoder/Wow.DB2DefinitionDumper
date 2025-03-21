@@ -5,8 +5,8 @@ namespace Wow.DB2DefinitionDumper.Providers;
 
 public class GithubDbdProvider
 {
-    private static readonly Uri BaseUri = new("https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/");
-    private readonly HttpClient _client = new();
+    static readonly Uri BaseUri = new("https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/");
+    readonly HttpClient _client = new();
 
     public GithubDbdProvider()
     {

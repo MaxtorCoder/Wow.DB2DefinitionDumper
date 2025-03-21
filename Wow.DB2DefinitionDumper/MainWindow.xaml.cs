@@ -16,12 +16,12 @@ namespace Wow.DB2DefinitionDumper
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        private readonly ListfileReader _listfileReader = new();
+        readonly ListfileReader _listfileReader = new();
+        readonly List<(string, string)> _metadatas = new();
+        readonly List<(string, string)> _structures = new();
+        readonly List<(string, string)> _loadInfos = new();
 
-        private List<DB2DisplayNameRecord> _db2DisplayNames = new();
-
-        private List<(string, string)> _metadatas = new();
-        private List<(string, string)> _structures = new();
+        List<DB2DisplayNameRecord> _db2DisplayNames = new();
 
         public MainWindow()
         {
@@ -29,12 +29,12 @@ namespace Wow.DB2DefinitionDumper
 
             LoadDisplayNames();
 
-            ToolBar.MouseLeftButtonDown += (e, o) => DragMove();
-            CloseBtn.Click += (e, o) => Close();
-            MinimizeBtn.Click += (e, o) => WindowState = WindowState.Minimized;
+            ToolBar.MouseLeftButtonDown += (_, _) => DragMove();
+            CloseBtn.Click += (_, _) => Close();
+            MinimizeBtn.Click += (_, _) => WindowState = WindowState.Minimized;
         }
 
-        private async void DumpButton_Click(object sender, RoutedEventArgs e)
+        async void DumpButton_Click(object sender, RoutedEventArgs e)
         {
             DumpButton.IsEnabled = false;
             VersionBox.IsEnabled = false;
@@ -53,14 +53,20 @@ namespace Wow.DB2DefinitionDumper
                         continue;
 
                     var normalizedDb2Name = db2Name.Replace("dbfilesclient/", "")
+                        .Replace("DBFilesClient/", "")
                         .Replace(".db2", "");
 
-                    var normalizedName = _db2DisplayNames.FirstOrDefault(x => x.name == normalizedDb2Name);
+                    var normalizedName = _db2DisplayNames.FirstOrDefault(x => x.Name == normalizedDb2Name);
                     if (normalizedName == null)
-                        continue;
-
-                    DumpLog.Content = $"Dumping {normalizedName.displayName} for build {VersionBox.Text} ...";
-                    await DumpDB2MetaData(normalizedName.displayName, version, true, fileDataId);
+                    {
+                        DumpLog.Content = $"Dumping {normalizedDb2Name} for build {VersionBox.Text} ...";
+                        await DumpDB2MetaData(normalizedDb2Name, version, true, fileDataId);
+                    }
+                    else
+                    {
+                        DumpLog.Content = $"Dumping {normalizedName.DisplayName} for build {VersionBox.Text} ...";
+                        await DumpDB2MetaData(normalizedName.DisplayName, version, true, fileDataId);
+                    }
                 }
             }
             else
@@ -74,14 +80,18 @@ namespace Wow.DB2DefinitionDumper
 
             if ((DumpAllDB2.IsChecked ?? false) || (DumpToFile.IsChecked ?? false))
             {
-                using var metadataWriter = new StreamWriter("DB2Metadata.h");
-                using var structureWriter = new StreamWriter("DB2Structure.h");
+                await using var metadataWriter = new StreamWriter("DB2Metadata.h");
+                await using var structureWriter = new StreamWriter("DB2Structure.h");
+                await using var loadInfoWriter = new StreamWriter("DB2LoadInfo.h");
 
                 foreach (var (_, data) in _metadatas)
                     await metadataWriter.WriteLineAsync(data + "\n");
 
                 foreach (var (_, data) in _structures)
-                    await structureWriter.WriteLineAsync(data);
+                    await structureWriter.WriteLineAsync(data + "\n");
+
+                foreach (var (_, data) in _loadInfos)
+                    await loadInfoWriter.WriteLineAsync(data + "\n");
 
                 await this.ShowMessageAsync("Dumper", "Finished dumping all structures and metadata!");
             }
@@ -92,24 +102,24 @@ namespace Wow.DB2DefinitionDumper
             TableDropdown.IsEnabled = true;
         }
 
-        private async Task DumpDB2MetaData(string? tableName, string? versionText, bool dumpToFile, uint fileDataId = 0)
+        async Task DumpDB2MetaData(string? tableName, string? versionText, bool dumpToFile, uint fileDataId = 0)
         {
             if (string.IsNullOrEmpty(tableName))
             {
-                await this.ShowMessageAsync("Error", "Invalid table name", MessageDialogStyle.Affirmative);
+                await this.ShowMessageAsync("Error", "Invalid table name");
                 return;
             }
 
             if (string.IsNullOrEmpty(versionText))
             {
-                await this.ShowMessageAsync("Error", "Please provide a valid build. Like 10.0.2.45969", MessageDialogStyle.Affirmative);
+                await this.ShowMessageAsync("Error", "Please provide a valid build. Like 10.0.2.45969");
                 return;
             }
 
             var array = versionText.Split('.');
             if (array.Length < 4)
             {
-                await this.ShowMessageAsync("Error", "Please provide a valid build. Like 10.0.2.45969", MessageDialogStyle.Affirmative);
+                await this.ShowMessageAsync("Error", "Please provide a valid build. Like 10.0.2.45969");
                 return;
             }
 
@@ -127,23 +137,25 @@ namespace Wow.DB2DefinitionDumper
 
                 if (dumpToFile)
                 {
-                    _structures.Add((tableName, dbdInfo.GetColumns()));
+                    _structures.Add((tableName, dbdInfo.DumpStructures()));
                     _metadatas.Add((tableName, dbdInfo.DumpMeta()));
+                    _loadInfos.Add((tableName, dbdInfo.DumpLoadInfo()));
                 }
                 else
                 {
-                    DB2StructResult.Text = dbdInfo.GetColumns();
+                    DB2StructResult.Text = dbdInfo.DumpStructures();
                     DB2MetaResult.Text = dbdInfo.DumpMeta();
+                    DB2LoadInfoResult.Text = dbdInfo.DumpLoadInfo();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // _ = MessageBox.Show($"Couldn't retrieve data for {tableName}!\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 // throw;
             }
         }
 
-        private void OpenPath_Click(object sender, RoutedEventArgs e)
+        void OpenPath_Click(object sender, RoutedEventArgs e)
         {
             // Configure open file dialog box
             var dialog = new OpenFileDialog
@@ -172,32 +184,36 @@ namespace Wow.DB2DefinitionDumper
                         TableNameInputGrid.Visibility = Visibility.Hidden;
                         TableNameDropdownGrid.Visibility = Visibility.Visible;
 
-                        var db2s = _listfileReader.GetAvailableDB2s();
-                        foreach (var db2 in db2s)
+                        var availableDatabases = _listfileReader.GetAvailableDB2s();
+                        foreach (var db2 in availableDatabases)
                         {
-                            var tableName = db2.Value.Replace("dbfilesclient/", "").Replace(".db2", "");
+                            if (!db2.Value.StartsWith("DBFilesClient/", StringComparison.OrdinalIgnoreCase))
+                                continue;
 
-                            var normalizedName = _db2DisplayNames.FirstOrDefault(x => x.name == tableName);
-                            if (normalizedName != null)
-                                TableDropdown.Items.Add(normalizedName.displayName);
+                            var tableName = db2.Value.Replace("dbfilesclient/", "")
+                                .Replace("DBFilesClient/", "")
+                                .Replace(".db2", "");
+
+                            var normalizedName = _db2DisplayNames.FirstOrDefault(x => x.Name == tableName);
+                            TableDropdown.Items.Add(normalizedName != null ? normalizedName.DisplayName : tableName);
                         }
 
                         DumpButton.IsEnabled = true;
                     });
 
-                    await this.ShowMessageAsync("Listfile", "Finished loading listfile!", MessageDialogStyle.Affirmative);
+                    await this.ShowMessageAsync("Listfile", "Finished loading listfile!");
                 });
             }
         }
 
-        private async void LoadDisplayNames()
+        async void LoadDisplayNames()
         {
             var fileStream = File.OpenRead("db2_display_names.json");
 
             var content = JsonSerializer.Deserialize<List<DB2DisplayNameRecord>>(fileStream);
             if (content == null)
             {
-                await this.ShowMessageAsync("Error", "Failed to load DB2 Display Names", MessageDialogStyle.Affirmative);
+                await this.ShowMessageAsync("Error", "Failed to load DB2 Display Names");
                 return;
             }
 
@@ -205,5 +221,5 @@ namespace Wow.DB2DefinitionDumper
         }
     }
 
-    public record DB2DisplayNameRecord(string name, string displayName);
+    public record DB2DisplayNameRecord(string Name, string DisplayName);
 }

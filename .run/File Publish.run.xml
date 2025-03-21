@@ -1,0 +1,6 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="File Publish" type="DotNetFolderPublish" factoryName="Publish to folder">
+    <riderPublish configuration="Debug" platform="Any CPU" produce_single_file="true" runtime="win-x64" self_contained="true" target_folder="$PROJECT_DIR$/Wow.DB2DefinitionDumper/bin/Debug/net9.0-windows/win-x64/publish" target_framework="net9.0-windows" uuid_high="215230913969671606" uuid_low="-8603627717196359338" />
+    <method v="2" />
+  </configuration>
+</component>
